@@ -8,6 +8,10 @@
 #  include <string.h>
 #endif
 
+#if defined(__SSE2__)
+#  include <emmintrin.h>
+#endif
+
 // All the functions have to be static inline to ensure good performance (some experiments indicate
 // almost x2 perf drop if they're not inline). Right now the `cpc_arena_*` functions don't need to
 // be inline but since they're quite small the savings don't seem worth to separate the definition
@@ -15,6 +19,29 @@
 #ifndef CPCAPI
 #  define CPCAPI static inline
 #endif
+
+// check for availability of __builtin_ctz
+#if defined(__has_builtin)
+#  if __has_builtin(__builtin_ctz)
+#    define CPC_HAS_BUILTIN_CTZ
+#  endif
+#elif defined(__GNUC__) || defined(__clang__)
+#  define CPC_HAS_BUILTIN_CTZ
+#endif
+
+// it requires a nonzero value
+CPCAPI unsigned ___cpc_count_trailing_zeros(unsigned value) {
+#if defined(CPC_HAS_BUILTIN_CTZ)
+  return (unsigned)__builtin_ctz(value);
+#else // provide a simple fallback if not available
+  unsigned count = 0;
+  while ((value & 1u) == 0) {
+    value >>= 1;
+    count++;
+  }
+  return count;
+#endif
+}
 
 // The basic element of the parser are string slices to enable zero-copy parsing
 typedef struct {
@@ -477,20 +504,43 @@ CPCAPI ___CPC_ANY(CPC_ANY_)
                       cpc_slice_sub(input, i, input.len - i));                                     \
   }
 
-#if defined(CPC_USE_STRING_H)
-// combination of CPC_TAKE_TILL + CPC_ONE_OF that is SIMD-friendly thanks
-// to memchr
-#  define CPC_TAKE_TILL_ONE_OF(name, stops)                                                        \
-    CPC_DEFINE_PARSER(name) {                                                                      \
-      size_t end = input.len;                                                                      \
-      for (const char *s = (stops); *s; ++s) {                                                     \
-        const char *p = memchr(input.ptr, *s, end);                                                \
-        if (p) end = (size_t)(p - input.ptr);                                                      \
-      }                                                                                            \
-      return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, end)),                               \
-                        cpc_slice_sub(input, end, input.len - end));                               \
-    }
+// Find the first byte in input that occurs in the stops string
+CPCAPI size_t ___cpc_find_first_of(const char *input, size_t len, const char *stops,
+                                   size_t stop_len) {
+  size_t i = 0;
 
+#if defined(__SSE2__)
+  const size_t simd_width = 16;
+
+  // Scan complete SIMD blocks, the unaligned load works for any input address
+  for (; i + simd_width <= len; i += simd_width) {
+    const __m128i bytes = _mm_loadu_si128((const __m128i *)(input + i));
+    __m128i       match = _mm_setzero_si128();
+    for (size_t j = 0; j < stop_len; ++j)
+      match = _mm_or_si128(match, _mm_cmpeq_epi8(bytes, _mm_set1_epi8(stops[j])));
+    const unsigned mask = (unsigned)_mm_movemask_epi8(match);
+    // ctz identifies the first match index; it is undefined for zero.
+    if (mask != 0) return i + (size_t)___cpc_count_trailing_zeros(mask);
+  }
+#endif
+
+  // SIMD scans only complete blocks; scan the remaining bytes here.
+  // This also provides the entire implementation on targets without SSE2.
+  for (; i < len; ++i)
+    for (size_t j = 0; j < stop_len; ++j)
+      if (input[i] == stops[j]) return i;
+  return len;
+}
+
+// combination of CPC_TAKE_TILL + CPC_ONE_OF
+#define CPC_TAKE_TILL_ONE_OF(name, stops)                                                          \
+  CPC_DEFINE_PARSER(name) {                                                                        \
+    size_t end = ___cpc_find_first_of(input.ptr, input.len, (stops), sizeof(stops) - 1);           \
+    return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, end)),                                 \
+                      cpc_slice_sub(input, end, input.len - end));                                 \
+  }
+
+#if defined(CPC_USE_STRING_H)
 // Parses a quoted string and returns a slice. Using the escape char to treat escaped content.
 #  define CPC_TAKE_QUOTED(name, quote, escape)                                                     \
     CPC_DEFINE_PARSER(name) {                                                                      \
