@@ -13,6 +13,7 @@ Parsing on C has problems:
 - No hidden allocations, user-supplied arena
 - Inlining-friendly, macros instead of function pointers in hot paths
 - SIMD specialized combinators
+- Used on PostgreSQL extensions (see [pg_csv](https://github.com/PostgREST/pg_csv#csv-import))
 
 ## Demo
 
