@@ -8,7 +8,7 @@ Parsing on C has problems:
 **CParseC** (**C** **Parse**r **C**ombinators) offers a solution to parsing that is flexible and performant:
 
 - Composable, expressive parsers written in plain C99 (inspired by Haskell's Parsec)
-- Single header file (cparsec.h) with no dependencies (no libc assumed by default)
+- Single header library, freestanding (no libc assumed)
 - Zero-copy parsing
 - No hidden allocations, user-supplied arena
 - Inlining-friendly, macros instead of function pointers in hot paths
@@ -54,8 +54,8 @@ int main(void) {
 }
 ```
 
-When parsing 1 million CSV rows the above parser is ~1.3 times faster than [BurntSushi/rust-csv](https://github.com/BurntSushi/rust-csv) and ~20 times faster than [attoparsec-csv](https://github.com/robinbb/attoparsec-csv/).
-See the [continuous benchmarking on CI](https://github.com/steve-chavez/CParseC/actions/runs/27530243247) to confirm the results.
+When parsing 1 million CSV rows the above parser is ~1.3x faster than [BurntSushi/rust-csv](https://github.com/BurntSushi/rust-csv) and ~20x faster than [attoparsec-csv](https://github.com/robinbb/attoparsec-csv/).
+See the github CI summary to confirm the results.
 
 ## API
 
