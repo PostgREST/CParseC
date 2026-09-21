@@ -12,7 +12,6 @@ all: test bench
 test: CFLAGS += -O0
 test: $(BUILD_DIR)/basic $(BUILD_DIR)/unnamed $(BUILD_DIR)/simd $(BUILD_DIR)/linkage $(BUILD_DIR)/freestanding $(BUILD_DIR)/example
 
-bench: CFLAGS += -O3
 bench: $(BUILD_DIR)/attoparsec_csv $(BUILD_DIR)/csv_demo $(BUILD_DIR)/csv_simd_demo $(BUILD_DIR)/csv-rust-demo $(BENCH_DATA_DIR)/customers-1000000.csv
 
 $(BUILD_DIR)/example: examples/example.c cparsec.h $(BUILD_DIR)/.gitignore
@@ -35,6 +34,8 @@ $(BUILD_DIR)/linkage: test/linkage/linkage.c test/linkage/a.c cparsec.h test/lin
 
 $(BUILD_DIR)/freestanding: test/freestanding.c test/basic.h test/assertions.h cparsec.h $(BUILD_DIR)/.gitignore
 	$(CC) $(CFLAGS) $(LDFLAGS) -ffreestanding -c $< -o $@
+
+$(BUILD_DIR)/csv_demo $(BUILD_DIR)/csv_simd_demo: CFLAGS += -O3
 
 $(BUILD_DIR)/csv_demo: bench/c/csv_demo.c bench/c/CParseCSV.c bench/c/csv.h bench/c/utils.h cparsec.h $(BUILD_DIR)/.gitignore
 	$(CC) $(CFLAGS) $(LDFLAGS) bench/c/csv_demo.c bench/c/CParseCSV.c -o $@
