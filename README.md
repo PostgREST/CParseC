@@ -53,7 +53,7 @@ int main(void) {
 }
 ```
 
-When parsing 1 million CSV rows the above parser is ~1.3x faster than [BurntSushi/rust-csv](https://github.com/BurntSushi/rust-csv) and ~20x faster than [attoparsec-csv](https://github.com/robinbb/attoparsec-csv/).
+When parsing 1 million CSV rows the above parser is ~1.9x faster than [BurntSushi/rust-csv](https://github.com/BurntSushi/rust-csv) and ~25x faster than [attoparsec-csv](https://github.com/robinbb/attoparsec-csv/).
 See the github CI summary to confirm the results.
 
 ## API
