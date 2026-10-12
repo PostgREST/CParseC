@@ -540,61 +540,61 @@ CPCAPI size_t ___cpc_find_first_of(const char *input, size_t len, const char *st
                       cpc_slice_sub(input, end, input.len - end));                                 \
   }
 
-#if defined(CPC_USE_STRING_H)
 // Parses a quoted string and returns a slice. Using the escape char to treat escaped content.
-#  define CPC_TAKE_QUOTED(name, quote, escape)                                                     \
-    CPC_DEFINE_PARSER(name) {                                                                      \
-      /* rejects anything that is too short (quoted would need at least 3 chars) or does not start \
-       * with the quote*/                                                                          \
-      if (input.len < 2 || input.ptr[0] != (quote))                                                \
-        return cpc_res_err(input, "missing quote", err);                                           \
-      /* start after the opening quote */                                                          \
-      if ((escape) == (quote)) {                                                                   \
-        size_t span = 1;                                                                           \
-        while (span < input.len) {                                                                 \
-          /* Jump to the next quote candidate instead of scanning char by char */                  \
-          const char *p = memchr(input.ptr + span, (quote), input.len - span);                     \
-          if (!p) break;                                                                           \
-          size_t idx = (size_t)(p - input.ptr);                                                    \
-          if ((idx + 1) < input.len && input.ptr[idx + 1] == (quote)) {                            \
-            /* A doubled quote is escaped content inside the quoted span */                        \
-            span = idx + 2;                                                                        \
-            continue;                                                                              \
-          }                                                                                        \
-          /* A lone quote closes the span, including the opening quote at index 0 */               \
-          span = idx + 1;                                                                          \
-          return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, span)),                          \
-                            cpc_slice_sub(input, span, input.len - span));                         \
+#define CPC_TAKE_QUOTED(name, quote, escape)                                                       \
+  CPC_DEFINE_PARSER(name) {                                                                        \
+    /* rejects anything that is too short (quoted would need at least 3 chars) or does not start   \
+     * with the quote*/                                                                            \
+    if (input.len < 2 || input.ptr[0] != (quote)) return cpc_res_err(input, "missing quote", err); \
+    const char cpc_quote_ = (quote);                                                               \
+    /* start after the opening quote */                                                            \
+    if ((escape) == (quote)) {                                                                     \
+      size_t span = 1;                                                                             \
+      while (span < input.len) {                                                                   \
+        /* Jump to the next quote candidate instead of scanning char by char */                    \
+        const size_t quote_offset =                                                                \
+            ___cpc_find_first_of(input.ptr + span, input.len - span, &cpc_quote_, 1);              \
+        if (quote_offset == input.len - span) break;                                               \
+        size_t idx = span + quote_offset;                                                          \
+        if ((idx + 1) < input.len && input.ptr[idx + 1] == (quote)) {                              \
+          /* A doubled quote is escaped content inside the quoted span */                          \
+          span = idx + 2;                                                                          \
+          continue;                                                                                \
         }                                                                                          \
-      } else {                                                                                     \
-        size_t span = 1;                                                                           \
-        while (span < input.len) {                                                                 \
-          /* Jump to the next quote candidate instead of scanning char by char */                  \
-          const char *p = memchr(input.ptr + span, (quote), input.len - span);                     \
-          if (!p) break;                                                                           \
-          size_t idx     = (size_t)(p - input.ptr);                                                \
-          size_t escapes = 0;                                                                      \
-          /* Count consecutive escape chars immediately before this quote candidate. */            \
-          while (idx > escapes && input.ptr[idx - 1 - escapes] == (escape))                        \
-            escapes++;                                                                             \
-                                                                                                   \
-          /* A quote preceded by an odd number of escape chars is escaped content. */              \
-          /* An even number like `//"` would mean that the backlash itself is escaped plus */      \
-          /* `"` would be a lone quote. */                                                         \
-          if ((escapes & 1u) != 0) {                                                               \
-            span = idx + 1;                                                                        \
-            continue;                                                                              \
-          }                                                                                        \
-          /* A lone quote closes the span, including the opening quote at index 0 */               \
-          span = idx + 1;                                                                          \
-          return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, span)),                          \
-                            cpc_slice_sub(input, span, input.len - span));                         \
-        }                                                                                          \
+        /* A lone quote closes the span, including the opening quote at index 0 */                 \
+        span = idx + 1;                                                                            \
+        return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, span)),                            \
+                          cpc_slice_sub(input, span, input.len - span));                           \
       }                                                                                            \
-      /* err if no closing quote is found */                                                       \
-      return cpc_res_err(input, "missing quote", err);                                             \
-    }
-#endif
+    } else {                                                                                       \
+      size_t span = 1;                                                                             \
+      while (span < input.len) {                                                                   \
+        /* Jump to the next quote candidate instead of scanning char by char */                    \
+        const size_t quote_offset =                                                                \
+            ___cpc_find_first_of(input.ptr + span, input.len - span, &cpc_quote_, 1);              \
+        if (quote_offset == input.len - span) break;                                               \
+        size_t idx     = span + quote_offset;                                                      \
+        size_t escapes = 0;                                                                        \
+        /* Count consecutive escape chars immediately before this quote candidate. */              \
+        while (idx > escapes && input.ptr[idx - 1 - escapes] == (escape))                          \
+          escapes++;                                                                               \
+                                                                                                   \
+        /* A quote preceded by an odd number of escape chars is escaped content. */                \
+        /* An even number like `//"` would mean that the backlash itself is escaped plus */        \
+        /* `"` would be a lone quote. */                                                           \
+        if ((escapes & 1u) != 0) {                                                                 \
+          span = idx + 1;                                                                          \
+          continue;                                                                                \
+        }                                                                                          \
+        /* A lone quote closes the span, including the opening quote at index 0 */                 \
+        span = idx + 1;                                                                            \
+        return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, span)),                            \
+                          cpc_slice_sub(input, span, input.len - span));                           \
+      }                                                                                            \
+    }                                                                                              \
+    /* err if no closing quote is found */                                                         \
+    return cpc_res_err(input, "missing quote", err);                                               \
+  }
 
 #define ___CPC_EOF(name)                                                                           \
   CPC_DEFINE_PARSER(name) {                                                                        \
