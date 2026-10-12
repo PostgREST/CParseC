@@ -4,10 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#if defined(CPC_USE_STRING_H)
-#  include <string.h>
-#endif
-
 #if defined(__SSE2__)
 #  include <emmintrin.h>
 #endif
@@ -57,18 +53,15 @@ typedef struct {
 
 // obtain a CpcSlice from a c string
 CPCAPI CpcSlice cpc_slice_from_cstr(const char *s) {
-#if defined(CPC_USE_STRING_H)
-  return (CpcSlice){.ptr = s, .len = strlen(s)};
-// The non string.h implementation of this function is very basic and scans byte by byte instead of
-// word by word. We can optimize this as discussed on
-// https://github.com/steve-chavez/CParseC/issues/3, but for now we leave that to `strlen` for
-// environments that use string.h. glibc `strlen` has various optimizations including SIMD.
-#else
+  // TODO This is a very basic implementation and scans byte by byte instead of
+  // word by word. We can optimize this as discussed on
+  // https://github.com/steve-chavez/CParseC/issues/3
+  // Note: `strlen` has various optimizations but it would require including <string.h> which
+  // doesn't seem worth it anymore now that we do native SIMD
   size_t n = 0;
   while (s[n] != '\0')
     n++;
   return (CpcSlice){.ptr = s, .len = n};
-#endif
 }
 
 // a sub region of the slice

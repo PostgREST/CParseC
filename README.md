@@ -23,7 +23,6 @@ A CSV parser looks like this:
 #include <stdio.h>
 #include <stdlib.h>
 
-#define CPC_USE_STRING_H
 #include "cparsec.h"
 
 CPC_TAKE_QUOTED(quotedField, '"', '"')
@@ -90,7 +89,7 @@ All the macros basically generate inlinable functions that take other inlinable 
 
 ### SIMD combinators
 
-These parsers are specialized versions that make use of `memchr` to be SIMD enabled [^1]. They require `<string.h>` support, so you have to `#define CPC_USE_STRING_H` to use them.
+These parsers are specialized versions that use SSE2 instructions.
 
 | Macro | Description |
 | --- | --- |
@@ -144,5 +143,3 @@ All the functions are inspired by Haskell Parsec or AttoParsec. Here's a table w
 | `CPC_APPLY` | `<*>` |
 | `CPC_MAP` | `<$>` |
 | `CPC_PURE` | `pure` |
-
-[^1]: `memchr` is not inherently SIMD. This depends on the implementation provided by the target libc. For example on `glibc` and `BSD libc` it is SIMD enabled but not on `musl`.
