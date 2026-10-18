@@ -6,6 +6,9 @@
 
 #if defined(__SSE2__)
 #  include <emmintrin.h>
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
+#  include <arm_neon.h>
+#  include <stdint.h>
 #endif
 
 // All the functions have to be static inline to ensure good performance (some experiments indicate
@@ -511,14 +514,32 @@ CPCAPI size_t ___cpc_find_first_of(const char *input, size_t len, const char *st
     __m128i       match = _mm_setzero_si128();
     for (size_t j = 0; j < stop_len; ++j)
       match = _mm_or_si128(match, _mm_cmpeq_epi8(bytes, _mm_set1_epi8(stops[j])));
+
     const unsigned mask = (unsigned)_mm_movemask_epi8(match);
     // ctz identifies the first match index; it is undefined for zero.
     if (mask != 0) return i + (size_t)___cpc_count_trailing_zeros(mask);
   }
+
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
+  const size_t simd_width = 16;
+
+  for (; i + simd_width <= len; i += simd_width) {
+    const uint8x16_t bytes = vld1q_u8((const uint8_t *)(input + i));
+    uint8x16_t       match = vdupq_n_u8(0);
+    for (size_t j = 0; j < stop_len; ++j)
+      match = vorrq_u8(match, vceqq_u8(bytes, vdupq_n_u8((uint8_t)stops[j])));
+
+    // Unlike SSE2, NEON has no movemask instruction, so inspect the matching lanes
+    // after the vector comparisons identify a block containing a stop byte.
+    uint8_t match_lanes[simd_width];
+    vst1q_u8(match_lanes, match);
+    for (size_t lane = 0; lane < simd_width; ++lane)
+      if (match_lanes[lane] != 0) return i + lane;
+  }
 #endif
 
   // SIMD scans only complete blocks; scan the remaining bytes here.
-  // This also provides the entire implementation on targets without SSE2.
+  // This also provides the entire implementation on targets without SIMD.
   for (; i < len; ++i)
     for (size_t j = 0; j < stop_len; ++j)
       if (input[i] == stops[j]) return i;
