@@ -1,9 +1,6 @@
 let
   lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   nixpkgsLock = lock.nodes.${lock.nodes.root.inputs.nixpkgs}.locked;
-  filnixLock = lock.nodes.${lock.nodes.root.inputs.filnix}.locked;
-  filnix = builtins.getFlake
-    "github:${filnixLock.owner}/${filnixLock.repo}/${filnixLock.rev}?narHash=${filnixLock.narHash}";
 in
 { pkgs ? import (builtins.fetchTarball {
     name = nixpkgsLock.rev;
@@ -11,9 +8,13 @@ in
     sha256 = nixpkgsLock.narHash;
   }) {},
   filcc ? if builtins.currentSystem == "x86_64-linux" then
+    let
+      filnixLock = lock.nodes.filnix.locked;
+      filnix = builtins.getFlake
+        "github:${filnixLock.owner}/${filnixLock.repo}/${filnixLock.rev}?narHash=${filnixLock.narHash}";
+    in
     filnix.packages.${builtins.currentSystem}.filcc
-  else
-    null
+  else null
 }:
 with pkgs;
 let
