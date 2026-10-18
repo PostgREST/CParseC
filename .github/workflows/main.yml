@@ -62,6 +62,36 @@ jobs:
           nix-shell --run "./bench/bench_regression.sh ${{ github.event.pull_request.base.sha }} build/csv_demo" >> "$GITHUB_STEP_SUMMARY"
           nix-shell --run "./bench/bench_regression.sh ${{ github.event.pull_request.base.sha }} build/csv_simd_demo" >> "$GITHUB_STEP_SUMMARY"
 
+  bench-arm:
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    steps:
+      - uses: actions/checkout@v4.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.5.0
+
+      - name: Build
+        run: nix-shell --run "make bench CC=${{ matrix.compiler }}"
+
+      - name: Run bench
+        run: nix-shell --run "./bench/bench.sh" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fetch PR base
+        if: github.event_name == 'pull_request'
+        run: git fetch origin ${{ github.event.pull_request.base.sha }}
+
+      - name: Run bench regression
+        if: github.event_name == 'pull_request'
+        run: |
+          nix-shell --run "./bench/bench_regression.sh ${{ github.event.pull_request.base.sha }} build/csv_demo" >> "$GITHUB_STEP_SUMMARY"
+          nix-shell --run "./bench/bench_regression.sh ${{ github.event.pull_request.base.sha }} build/csv_simd_demo" >> "$GITHUB_STEP_SUMMARY"
+
   style:
     runs-on: ubuntu-latest
 
