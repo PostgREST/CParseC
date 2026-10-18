@@ -89,7 +89,7 @@ All the macros basically generate inlinable functions that take other inlinable 
 
 ### SIMD combinators
 
-These parsers are specialized versions that use SSE2 instructions.
+These parsers are specialized versions that can use SIMD instructions on supported architectures.
 
 | Macro | Description |
 | --- | --- |
