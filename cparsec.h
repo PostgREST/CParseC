@@ -146,6 +146,12 @@ CPCAPI CpcValue cpc_val_slice(CpcSlice s) {
   return (CpcValue){.kind = CPC_SLICE, .as.slice = s};
 }
 
+// Return the first n bytes as a successful match. Assumes n <= input.len.
+CPCAPI CpcResult cpc_res_take(CpcSlice input, size_t n) {
+  return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, n)),
+                    cpc_slice_sub(input, n, input.len - n));
+}
+
 CPCAPI CpcValue cpc_val_list(CpcArena *A) {
   return (CpcValue){.kind = CPC_LIST, .as.list = {.start = A->offset, .len = 0}};
 }
@@ -241,8 +247,7 @@ CPCAPI bool cpc_no_progress_made(const CpcSlice cur, const CpcSlice prev) {
     for (size_t i = 0; i < slice.len; ++i)                                                         \
       if (input.ptr[i] != slice.ptr[i]) return cpc_res_err(input, "mismatch", err);                \
                                                                                                    \
-    return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, slice.len)),                           \
-                      cpc_slice_sub(input, slice.len, input.len - slice.len));                     \
+    return cpc_res_take(input, slice.len);                                                         \
   }
 
 #define CPC_STRING(name, lit) CPC_DEFINE_PARSER(name) ___CPC_STRING_BODY(lit)
@@ -254,8 +259,7 @@ CPCAPI bool cpc_no_progress_made(const CpcSlice cur, const CpcSlice prev) {
 #define ___CPC_ANY(name)                                                                           \
   CPC_DEFINE_PARSER(name) {                                                                        \
     if (input.len == 0) return cpc_res_err(input, "eof", err);                                     \
-    return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, 1)),                                   \
-                      cpc_slice_sub(input, 1, input.len - 1));                                     \
+    return cpc_res_take(input, 1);                                                                 \
   }
 
 // Succeeds if there is at least one character of input. Returns the parsed character.
@@ -267,9 +271,7 @@ CPCAPI ___CPC_ANY(CPC_ANY_)
   CPC_DEFINE_PARSER(name) {                                                                        \
     if (input.len == 0) return cpc_res_err(input, "none matched", err);                            \
     for (size_t i = 0; (chars)[i] != '\0'; i++)                                                    \
-      if (input.ptr[0] == (chars)[i])                                                              \
-        return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, 1)),                               \
-                          cpc_slice_sub(input, 1, input.len - 1));                                 \
+      if (input.ptr[0] == (chars)[i]) return cpc_res_take(input, 1);                               \
     return cpc_res_err(input, "none matched", err);                                                \
   }
 
@@ -347,9 +349,7 @@ CPCAPI ___CPC_ANY(CPC_ANY_)
     while (i < input.len && (pred)(input.ptr[i]))                                                  \
       i++;                                                                                         \
     validate;                                                                                      \
-    /* return the success from [0..i] and the rest from [i..len-i] */                              \
-    return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, i)),                                   \
-                      cpc_slice_sub(input, i, input.len - i));                                     \
+    return cpc_res_take(input, i);                                                                 \
   }
 
 // Consume input as long as the predicate returns true, and return the consumed
@@ -499,8 +499,7 @@ CPCAPI ___CPC_ANY(CPC_ANY_)
     size_t i = 0;                                                                                  \
     while (i < input.len && !(pred)(input.ptr[i]))                                                 \
       i++;                                                                                         \
-    return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, i)),                                   \
-                      cpc_slice_sub(input, i, input.len - i));                                     \
+    return cpc_res_take(input, i);                                                                 \
   }
 
 // Find the first byte in input that occurs in the stops string
@@ -553,8 +552,7 @@ CPCAPI size_t ___cpc_find_first_of(const char *input, size_t len, const char *st
 #define CPC_TAKE_TILL_ONE_OF(name, stops)                                                          \
   CPC_DEFINE_PARSER(name) {                                                                        \
     size_t end = ___cpc_find_first_of(input.ptr, input.len, (stops), sizeof(stops) - 1);           \
-    return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, end)),                                 \
-                      cpc_slice_sub(input, end, input.len - end));                                 \
+    return cpc_res_take(input, end);                                                               \
   }
 
 // Parses a quoted string and returns a slice. Using the escape char to treat escaped content.
@@ -580,8 +578,7 @@ CPCAPI size_t ___cpc_find_first_of(const char *input, size_t len, const char *st
         }                                                                                          \
         /* A lone quote closes the span, including the opening quote at index 0 */                 \
         span = idx + 1;                                                                            \
-        return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, span)),                            \
-                          cpc_slice_sub(input, span, input.len - span));                           \
+        return cpc_res_take(input, span);                                                          \
       }                                                                                            \
     } else {                                                                                       \
       size_t span = 1;                                                                             \
@@ -605,8 +602,7 @@ CPCAPI size_t ___cpc_find_first_of(const char *input, size_t len, const char *st
         }                                                                                          \
         /* A lone quote closes the span, including the opening quote at index 0 */                 \
         span = idx + 1;                                                                            \
-        return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, span)),                            \
-                          cpc_slice_sub(input, span, input.len - span));                           \
+        return cpc_res_take(input, span);                                                          \
       }                                                                                            \
     }                                                                                              \
     /* err if no closing quote is found */                                                         \
@@ -628,15 +624,10 @@ CPCAPI ___CPC_EOF(CPC_EOF_)
     if (input.len == 0) return cpc_res_err(input, "expected newline", err);                        \
     const char *p = input.ptr;                                                                     \
     if (p[0] == '\r') {                                                                            \
-      if (input.len >= 2 && p[1] == '\n')                                                          \
-        return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, 2)),                               \
-                          cpc_slice_sub(input, 2, input.len - 2));                                 \
-      return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, 1)),                                 \
-                        cpc_slice_sub(input, 1, input.len - 1));                                   \
+      if (input.len >= 2 && p[1] == '\n') return cpc_res_take(input, 2);                           \
+      return cpc_res_take(input, 1);                                                               \
     }                                                                                              \
-    if (p[0] == '\n')                                                                              \
-      return cpc_res_ok(cpc_val_slice(cpc_slice_sub(input, 0, 1)),                                 \
-                        cpc_slice_sub(input, 1, input.len - 1));                                   \
+    if (p[0] == '\n') return cpc_res_take(input, 1);                                               \
     return cpc_res_err(input, "expected newline", err);                                            \
   }
 
