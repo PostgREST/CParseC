@@ -283,6 +283,9 @@ CPCAPI ___CPC_ANY(CPC_ANY_)
       return CPC_PARSE(y, input, A, err);                                                          \
   }
 
+// Wraps an existing parser and changes its fallback parse error message.
+// The interface went through a number of changes to ensure no perf is lost because of the wrapping.
+// see https://github.com/PostgREST/CParseC/pull/4
 #define CPC_LABEL(name, parser, label)                                                             \
   CPC_DEFINE_PARSER(name) {                                                                        \
     return CPC_PARSE(parser, input, A, err ? err : (label));                                       \
