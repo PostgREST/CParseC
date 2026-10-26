@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define CPC_USE_STRING_H
 #include "cparsec.h"
 
 CPC_TAKE_QUOTED(quotedField, '"', '"')
