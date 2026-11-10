@@ -2,19 +2,37 @@
   "nodes": {
     "filnix": {
       "inputs": {
+        "finix": "finix",
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1791295464,
-        "narHash": "sha256-cuguL2Jw2zorA8kxgvIw6tDJSFPVdtAukR7Qmd+1rnI=",
+        "lastModified": 1794329843,
+        "narHash": "sha256-kuRFW8azQtH9800m/xmZbbVcqs88BGqxXGPhFFpT47k=",
         "owner": "mbrock",
         "repo": "filnix",
-        "rev": "54c476a2b53b5bcd9b6384fa13e412a2a1ac45e1",
+        "rev": "198bee5f1e0ac659c7abd7bec26880985b201055",
         "type": "github"
       },
       "original": {
         "owner": "mbrock",
         "repo": "filnix",
+        "type": "github"
+      }
+    },
+    "finix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791396781,
+        "narHash": "sha256-ftxhTlFuBHQcXhztoiVQSkQ1aW3j28sZNSosINkZBXk=",
+        "owner": "finix-community",
+        "repo": "finix",
+        "rev": "9fafdc3f091e963585a0dd4df028d58c2d66d815",
+        "type": "github"
+      },
+      "original": {
+        "owner": "finix-community",
+        "repo": "finix",
+        "rev": "9fafdc3f091e963585a0dd4df028d58c2d66d815",
         "type": "github"
       }
     },
@@ -37,7 +55,7 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1750093231,
+        "lastModified": 1750111231,
         "narHash": "sha256-3a7Tha/RwYlzH/v3PJrG7+HjOj4c6YOv2K8sqdGsHVQ=",
         "owner": "NixOS",
         "repo": "nixpkgs",
