@@ -4,6 +4,11 @@
     filnix.url = "github:mbrock/filnix";
   };
 
+  nixConfig = {
+    extra-substituters = [ "https://filc.cachix.org" ];
+    extra-trusted-public-keys = [ "filc.cachix.org-1:8rA7kXyu1HaJuMTsAKfA9fU/+r8YtLv5KiZ5hfDNZMk=" ];
+  };
+
   outputs = { self, nixpkgs, filnix }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
