@@ -97,6 +97,9 @@ CPC_MATCH(p_match_ab, p_ab_for_match)
 CPC_ANY(p_any)
 CPC_ANY(p_any_l_)
 CPC_LABEL(p_any_l, p_any_l_, "expected any char")
+CPC_CHAR(p_asterisk, '*')
+CPC_CHAR(p_asterisk_l_, '*')
+CPC_LABEL(p_asterisk_l, p_asterisk_l_, "expected '*'")
 
 int cpc_basic_test_run(void) {
   {
@@ -719,6 +722,41 @@ int cpc_basic_test_run(void) {
     ASSERT(!result.ok);
     ASSERT_REST_EMPTY(result);
     ASSERT_ERR_EQ(result, "expected any char");
+  }
+
+  {
+    PUTS("The char parser succeeds...");
+
+    CpcResult result = CPC_PARSE(p_asterisk, cpc_slice_from_cstr("* leftovers"), NULL);
+    ASSERT_OUT_SLICE_EQ(result, "*");
+    ASSERT_REST_EQ(result, " leftovers");
+  }
+
+  {
+    PUTS("The char parser fails if there's a mismatch...");
+
+    CpcResult result = CPC_PARSE(p_asterisk, cpc_slice_from_cstr("unknown leftovers"), NULL);
+    ASSERT_OUT_NOTHING(result);
+    ASSERT_REST_EQ(result, "unknown leftovers");
+    ASSERT_ERR_EQ(result, "mismatch");
+  }
+
+  {
+    PUTS("The char parser fails if the input is too short...");
+
+    CpcResult result = CPC_PARSE(p_asterisk, cpc_slice_from_cstr(""), NULL);
+    ASSERT_OUT_NOTHING(result);
+    ASSERT_REST_EQ(result, "");
+    ASSERT_ERR_EQ(result, "eof");
+  }
+
+  {
+    PUTS("The char parser can be labeled...");
+
+    CpcResult result = CPC_PARSE(p_asterisk_l, cpc_slice_from_cstr("a"), NULL);
+    ASSERT_OUT_NOTHING(result);
+    ASSERT_REST_EQ(result, "a");
+    ASSERT_ERR_EQ(result, "expected '*'");
   }
 
   return 0;

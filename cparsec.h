@@ -256,6 +256,17 @@ CPCAPI bool cpc_no_progress_made(const CpcSlice cur, const CpcSlice prev) {
     CPC_DEFINE_PARSER_(CPC_CONCAT(cpc_string_, __COUNTER__), ___CPC_STRING_BODY(lit))
 #endif
 
+// Succeeds if the next char in input matches the given char. Returns the parsed character.
+#define CPC_CHAR(name, ch)                                                                         \
+  CPC_DEFINE_PARSER(name) {                                                                        \
+    if (input.len == 0) return cpc_res_err(input, "eof", err);                                     \
+                                                                                                   \
+    if (input.ptr[0] == ch)                                                                        \
+      return cpc_res_take(input, 1);                                                               \
+    else                                                                                           \
+      return cpc_res_err(input, "mismatch", err);                                                  \
+  }
+
 #define ___CPC_ANY(name)                                                                           \
   CPC_DEFINE_PARSER(name) {                                                                        \
     if (input.len == 0) return cpc_res_err(input, "eof", err);                                     \
