@@ -64,6 +64,7 @@ All the macros basically generate inlinable functions that take other inlinable 
 
 | Macro | Description |
 | --- | --- |
+| `CPC_CHAR(name, ch)` | Parses the `ch` character and returns it as a slice. |
 | `CPC_STRING(name, lit)` | Parses the exact string literal `lit` and returns it as a slice. |
 | `CPC_ALT(name, x, y)` | Tries parser `x`, and if it fails, tries parser `y` on the same input. |
 | `CPC_RIGHT(name, x, y)` | Runs `x` then `y`, returning only the output of `y`. |
